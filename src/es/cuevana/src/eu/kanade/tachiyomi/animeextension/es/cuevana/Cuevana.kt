@@ -33,7 +33,7 @@ import okhttp3.Response
 class Cuevana() : ConfigurableAnimeSource, AnimeHttpSource() {
     override val name = "Cuevana"
 
-    override val baseUrl = "https://wv3.cuevana3.eu"
+    override val baseUrl = "https://la.movie"
 
     override val lang = "es"
 
