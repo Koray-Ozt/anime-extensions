@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.animeextension.en.animepahe
 
-import android.app.Application
 import androidx.preference.PreferenceScreen
+import aniyomi.lib.cloudflareinterceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.animeextension.en.animepahe.dto.EpisodeDto
 import eu.kanade.tachiyomi.animeextension.en.animepahe.dto.LatestAnimeDto
 import eu.kanade.tachiyomi.animeextension.en.animepahe.dto.ResponseDto
@@ -27,7 +27,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Element
-import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.ceil
@@ -44,13 +43,13 @@ class AnimePahe :
         .set("User-Agent", UA_DESKTOP)
         .set("Referer", "$baseUrl/")
 
-    private val interceptor = DdosGuardInterceptor(network.client)
+    private val ddosGuardInterceptor = DdosGuardInterceptor(network.client)
+    private val cloudflareInterceptor = CloudflareInterceptor(network.client)
 
     override val client = network.client.newBuilder()
-        .addInterceptor(interceptor)
+        .addInterceptor(ddosGuardInterceptor)
+        .addInterceptor(cloudflareInterceptor)
         .build()
-
-    private val context: Application by injectLazy()
 
     override val name = "AnimePahe"
 
@@ -338,7 +337,7 @@ class AnimePahe :
             links.mapNotNull { (_, paheWinLink, quality) ->
                 if (paheWinLink.isNullOrBlank()) return@mapNotNull null
                 runCatching {
-                    KwikExtractor(client, headers).getStreamVideo(context, paheWinLink, quality)
+                    KwikExtractor(client, headers).getStreamVideo(paheWinLink, quality)
                 }.getOrNull()
             }
         } else {
@@ -493,6 +492,5 @@ class AnimePahe :
         }
 
         const val UA_DESKTOP = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
-        const val UA_MOBILE = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36"
     }
 }
