@@ -2,6 +2,7 @@ package aniyomi.lib.m3u8server
 
 import android.util.Log
 import okhttp3.OkHttpClient
+import org.nanohttpd.protocols.http.response.Response
 
 /**
  * M3U8 Server manager to facilitate usage
@@ -67,7 +68,7 @@ class M3u8ServerManager(
      * @param headers Optional headers to use for the request
      * @return Processed segment data
      */
-    suspend fun processSegmentUrl(segmentUrl: String, headers: Map<String, String> = emptyMap()): ByteArray? = server?.processSegmentUrl(segmentUrl, headers)
+    fun processSegmentUrl(segmentUrl: String, headers: Map<String, String> = emptyMap()): Response? = server?.handleSegment(segmentUrl, headers)
 
     /**
      * Gets server information
