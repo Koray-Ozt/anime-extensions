@@ -1,7 +1,9 @@
 package eu.kanade.tachiyomi.animeextension.tr.hentaizm
 
+import android.util.Base64
 import aniyomi.lib.omniembedextractor.OmniEmbedExtractor
 import aniyomi.lib.playlistutils.PlaylistUtils
+import eu.kanade.tachiyomi.animeextension.tr.hentaizm.extractors.VideaExtractor
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -204,6 +206,11 @@ class HentaiZM : AnimeHttpSource() {
             .flatMap { embedExtractor.extractVideos(it, "Hentaizm", emptyList()) }
         if (embeddedVideos.isNotEmpty()) return embeddedVideos.distinctBy { it.videoUrl }
 
+        for (alternative in protectedAlternatives(document).sortedBy(::providerPriority)) {
+            val videos = videosFromAlternative(alternative, pageUrl, pageHeaders)
+            if (videos.isNotEmpty()) return videos.distinctBy { it.videoUrl }
+        }
+
         val result = webViewResolver.resolve(pageUrl)
         result.error?.let { throw Exception(it) }
         val streamUrl = result.url
@@ -214,6 +221,88 @@ class HentaiZM : AnimeHttpSource() {
 
         return videoFromUrl(streamUrl, pageUrl, videoHeaders)
     }
+
+    private fun protectedAlternatives(document: Document): List<PlayerAlternative> {
+        val encodedProviders = document.select("script")
+            .firstOrNull { it.data().contains("__TA_PROVIDERS_ENC") }
+            ?.data()
+            ?.let { PROVIDERS_REGEX.find(it)?.groupValues?.get(1) }
+            ?: return emptyList()
+        val providers = runCatching { JSONObject(decodeProtected(encodedProviders)) }.getOrNull()
+            ?: return emptyList()
+
+        return document.select("#video-alternatives .alt-btn[data-provider][data-videoid]")
+            .mapNotNull { button ->
+                val provider = decodeProtected(button.attr("data-provider"))
+                val videoId = decodeProtected(button.attr("data-videoid"))
+                if (provider.isBlank() || videoId.isBlank()) return@mapNotNull null
+
+                val embedUrl = when (provider) {
+                    "cloudmailru" -> "https://cloud.mail.ru/public/$videoId"
+                    "videa" -> "https://videa.hu/player?v=$videoId"
+                    "okru" -> "https://ok.ru/videoembed/$videoId"
+                    else -> {
+                        val html = providers.optString(provider).replace("%VIDEOID%", videoId)
+                        Jsoup.parseBodyFragment(html, baseUrl)
+                            .selectFirst("iframe[src], a[href]")
+                            ?.let { it.absUrl("src").ifBlank { it.absUrl("href") } }
+                            .orEmpty()
+                    }
+                }
+                if (embedUrl.isBlank()) return@mapNotNull null
+
+                PlayerAlternative(
+                    name = button.text().trim().ifBlank { provider },
+                    provider = provider,
+                    videoId = videoId,
+                    embedUrl = embedUrl,
+                )
+            }
+    }
+
+    private fun videosFromAlternative(
+        alternative: PlayerAlternative,
+        pageUrl: String,
+        pageHeaders: Headers,
+    ): List<Video> {
+        return when (alternative.provider) {
+            "videa" -> runCatching {
+                VideaExtractor(client).videosFromUrl(alternative.embedUrl)
+            }.getOrDefault(emptyList())
+
+            "okru" -> OmniEmbedExtractor(client, pageHeaders)
+                .extractVideos(alternative.embedUrl, "Hentaizm - ${alternative.name}", emptyList())
+
+            else -> {
+                val result = webViewResolver.resolve(alternative.embedUrl)
+                val streamUrl = result.url ?: return emptyList()
+                val videoHeaders = pageHeaders.newBuilder()
+                    .set("Referer", alternative.embedUrl)
+                    .apply {
+                        result.cookie?.takeIf(String::isNotBlank)?.let { set("Cookie", it) }
+                    }
+                    .build()
+                runCatching {
+                    videoFromUrl(streamUrl, alternative.embedUrl.ifBlank { pageUrl }, videoHeaders)
+                }.getOrDefault(emptyList())
+            }
+        }
+    }
+
+    private fun providerPriority(alternative: PlayerAlternative): Int = when (alternative.provider) {
+        "cloudmailru" -> 0
+        "videa" -> 1
+        "okru" -> 2
+        "abyss" -> 3
+        else -> 4
+    }
+
+    private fun decodeProtected(value: String): String = runCatching {
+        val padded = value.padEnd(value.length + (4 - value.length % 4) % 4, '=')
+        Base64.decode(padded, Base64.URL_SAFE or Base64.NO_WRAP)
+            .toString(Charsets.UTF_8)
+            .reversed()
+    }.getOrDefault(value)
 
     private fun videoFromUrl(url: String, referer: String, videoHeaders: Headers): List<Video> {
         val absoluteUrl = if (url.startsWith("http")) url else url.absoluteUrl()
@@ -271,6 +360,14 @@ class HentaiZM : AnimeHttpSource() {
     }
 
     companion object {
+        private data class PlayerAlternative(
+            val name: String,
+            val provider: String,
+            val videoId: String,
+            val embedUrl: String,
+        )
+
+        private val PROVIDERS_REGEX = Regex("__TA_PROVIDERS_ENC\\s*=\\s*['\"]([^'\"]+)")
         private val EPISODE_TITLE_SUFFIX = Regex("\\s+\\d+(?:[.,]\\d+)?\\.\\s*Bölüm.*$", RegexOption.IGNORE_CASE)
         private val EPISODE_URL = Regex("/sezon-(\\d+)-bolum-([\\d.,]+)")
     }

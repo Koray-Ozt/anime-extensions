@@ -96,7 +96,7 @@ class HentaizmWebViewResolver(private val globalHeaders: Headers) {
                                 const video = document.querySelector('video');
                                 const source = document.querySelector('video source[src]');
                                 const stream = video?.currentSrc || video?.src || source?.src || '';
-                                if (stream) {
+                                if (/^https?:\/\/.+\.(m3u8|mp4|mpd)(\?.*)?$/i.test(stream)) {
                                   window.$interfaceName.passVideo(stream);
                                   return;
                                 }
@@ -147,7 +147,7 @@ class HentaizmWebViewResolver(private val globalHeaders: Headers) {
     }
 
     companion object {
-        private const val TIMEOUT_SECONDS = 30L
+        private const val TIMEOUT_SECONDS = 20L
         private val STREAM_REGEX = Regex("https?://.+\\.(?:m3u8|mp4|mpd)(?:\\?.*)?$", RegexOption.IGNORE_CASE)
         private val BLOCKED_HOSTS = listOf("doubleclick", "google-analytics", "googletagmanager")
     }
