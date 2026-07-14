@@ -59,6 +59,16 @@ jobs:
           curl -fsSL "$inspector_url" -o Inspector.jar
           java -jar Inspector.jar repo/apk output.json tmp
           python .github/scripts/create-repo.py
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          fingerprint="$("$apksigner" verify --print-certs repo/apk/*.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { print $2; exit }')"
+          test -n "$fingerprint"
+          jq -n \
+            --arg name "Koray-Ozt Anime Extensions" \
+            --arg shortName "Koray-Ozt" \
+            --arg website "https://github.com/Koray-Ozt/anime-extensions" \
+            --arg fingerprint "$fingerprint" \
+            '{meta: {name: $name, shortName: $shortName, website: $website, signingKeyFingerprint: $fingerprint}}' \
+            > repo/repo.json
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
