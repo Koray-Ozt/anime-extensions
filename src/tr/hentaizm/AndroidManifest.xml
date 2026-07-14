@@ -13,8 +13,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="www.hentaizm6.online"
-                    android:pathPattern="/hentai-detay/..*"
+                    android:host="www.hentaizm1.com"
+                    android:pathPattern="/anime/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

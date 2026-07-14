@@ -1,8 +1,13 @@
 ext {
     extName = 'HentaiZM'
     extClass = '.HentaiZM'
-    extVersionCode = 9
+    extVersionCode = 10
     isNsfw = true
 }
 
 apply plugin: "kei.plugins.extension.legacy"
+
+dependencies {
+    implementation(project(':lib:omniembedextractor'))
+    implementation(project(':lib:playlistutils'))
+}
