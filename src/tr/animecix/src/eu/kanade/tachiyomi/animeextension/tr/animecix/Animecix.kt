@@ -149,8 +149,7 @@ class Animecix : AnimeHttpSource() {
         }
     }
 
-    override fun animeDetailsParse(response: Response): SAnime =
-        throw UnsupportedOperationException("Coroutine implementation is used")
+    override fun animeDetailsParse(response: Response): SAnime = throw UnsupportedOperationException("Coroutine implementation is used")
 
     override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
         val titleId = anime.titleId()
@@ -210,8 +209,7 @@ class Animecix : AnimeHttpSource() {
             )
     }
 
-    override fun episodeListParse(response: Response): List<SEpisode> =
-        throw UnsupportedOperationException("Coroutine implementation is used")
+    override fun episodeListParse(response: Response): List<SEpisode> = throw UnsupportedOperationException("Coroutine implementation is used")
 
     override suspend fun getVideoList(episode: SEpisode): List<Video> {
         val titleId = episode.url.substringAfter("/titles/").substringBefore("/").toInt()
@@ -290,8 +288,7 @@ class Animecix : AnimeHttpSource() {
 
     private fun SAnime.titleId(): Int = url.substringAfter("/titles/").substringBefore("/").toInt()
 
-    private fun SEpisode.seasonFromUrl(): Int =
-        url.substringAfter("/season/").substringBefore("/").toInt()
+    private fun SEpisode.seasonFromUrl(): Int = url.substringAfter("/season/").substringBefore("/").toInt()
 
     private fun JsonObject.toStatus(): Int {
         val ended = this["series_ended"]?.jsonPrimitive?.let {
@@ -300,32 +297,23 @@ class Animecix : AnimeHttpSource() {
         return if (ended == true) SAnime.COMPLETED else SAnime.ONGOING
     }
 
-    private fun JsonObject.string(key: String): String? =
-        this[key]?.jsonPrimitive?.contentOrNull
+    private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 
-    private fun JsonObject.int(key: String): Int? =
-        this[key]?.jsonPrimitive?.intOrNull
+    private fun JsonObject.int(key: String): Int? = this[key]?.jsonPrimitive?.intOrNull
 
-    private fun JsonObject.float(key: String): Float? =
-        this[key]?.jsonPrimitive?.floatOrNull
+    private fun JsonObject.float(key: String): Float? = this[key]?.jsonPrimitive?.floatOrNull
 
-    private fun JsonObject.boolean(key: String, default: Boolean): Boolean =
-        this[key]?.jsonPrimitive?.booleanOrNull ?: default
+    private fun JsonObject.boolean(key: String, default: Boolean): Boolean = this[key]?.jsonPrimitive?.booleanOrNull ?: default
 
-    private fun JsonObject.array(key: String): JsonArray =
-        this[key] as? JsonArray ?: JsonArray(emptyList())
+    private fun JsonObject.array(key: String): JsonArray = this[key] as? JsonArray ?: JsonArray(emptyList())
 
-    private fun JsonObject.obj(key: String): JsonObject =
-        this[key]?.jsonObject ?: JsonObject(emptyMap())
+    private fun JsonObject.obj(key: String): JsonObject = this[key]?.jsonObject ?: JsonObject(emptyMap())
 
-    private fun JsonObject.objOrNull(key: String): JsonObject? =
-        this[key] as? JsonObject
+    private fun JsonObject.objOrNull(key: String): JsonObject? = this[key] as? JsonObject
 
-    private fun formatEpisodeNumber(value: Float): String =
-        if (value % 1F == 0F) value.toInt().toString() else value.toString()
+    private fun formatEpisodeNumber(value: Float): String = if (value % 1F == 0F) value.toInt().toString() else value.toString()
 
-    private fun qualityNumber(label: String): Int =
-        Regex("(\\d{3,4})p").find(label)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+    private fun qualityNumber(label: String): Int = Regex("(\\d{3,4})p").find(label)?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
     private fun parseDate(value: String?): Long {
         if (value.isNullOrBlank()) return 0L
