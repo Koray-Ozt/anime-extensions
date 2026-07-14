@@ -1,4 +1,4 @@
-name: Build AnimeciX
+name: Build anime extensions
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - "src/tr/animecix/**"
+      - "src/tr/animpow/**"
       - ".github/workflows/build_push.yml"
   workflow_dispatch:
 
@@ -13,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: animecix-${{ github.ref }}
+  group: anime-extensions-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -40,12 +41,12 @@ jobs:
           printf '%s' "${{ secrets.SIGNING_KEY }}" | base64 --decode > signingkey.jks
           chmod 600 signingkey.jks
 
-      - name: Build AnimeciX
+      - name: Build extensions
         env:
           ALIAS: ${{ secrets.ALIAS }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :src:tr:animecix:assembleRelease
+        run: ./gradlew :src:tr:animecix:assembleRelease :src:tr:animpow:assembleRelease
 
       - name: Prepare repository files
         shell: bash
@@ -54,7 +55,7 @@ jobs:
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         run: |
           mkdir -p repo/apk
-          find src/tr/animecix/build/outputs/apk/release -name '*.apk' -exec cp {} repo/apk/ \;
+          find src/tr/animecix/build/outputs/apk/release src/tr/animpow/build/outputs/apk/release -name '*.apk' -exec cp {} repo/apk/ \;
           for apk in repo/apk/*-release.apk; do
             mv "$apk" "${apk%-release.apk}.apk"
           done
@@ -75,11 +76,11 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: animecix-apk
+          name: anime-extensions-apk
           path: repo/apk/*.apk
 
       - name: Upload Anikku repository
         uses: actions/upload-artifact@v4
         with:
-          name: animecix-repo
+          name: anime-extensions-repo
           path: repo/

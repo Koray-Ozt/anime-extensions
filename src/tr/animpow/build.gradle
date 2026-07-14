@@ -1,0 +1,7 @@
+ext {
+    extName = 'Animpow'
+    extClass = '.Animpow'
+    extVersionCode = 1
+}
+
+apply plugin: "kei.plugins.extension.legacy"
