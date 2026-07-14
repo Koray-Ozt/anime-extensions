@@ -49,6 +49,9 @@ jobs:
 
       - name: Prepare repository files
         shell: bash
+        env:
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         run: |
           mkdir -p repo/apk
           find src/tr/animecix/build/outputs/apk/release -name '*.apk' -exec cp {} repo/apk/ \;
@@ -59,8 +62,7 @@ jobs:
           curl -fsSL "$inspector_url" -o Inspector.jar
           java -jar Inspector.jar repo/apk output.json tmp
           python .github/scripts/create-repo.py
-          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          fingerprint="$("$apksigner" verify --print-certs repo/apk/*.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { print $2; exit }')"
+          fingerprint="$(keytool -list -v -keystore signingkey.jks -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" | awk -F': ' '/SHA256:/ { gsub(":", "", $2); print tolower($2); exit }')"
           test -n "$fingerprint"
           jq -n \
             --arg name "Koray-Ozt Anime Extensions" \
