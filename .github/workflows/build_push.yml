@@ -8,6 +8,7 @@ on:
       - "src/tr/animecix/**"
       - "src/tr/animpow/**"
       - "src/tr/hentaizm/**"
+      - "src/tr/tranimeizle/**"
       - ".github/workflows/build_push.yml"
   workflow_dispatch:
 
@@ -47,7 +48,7 @@ jobs:
           ALIAS: ${{ secrets.ALIAS }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :src:tr:animecix:assembleRelease :src:tr:animpow:assembleRelease :src:tr:hentaizm:assembleRelease
+        run: ./gradlew :src:tr:animecix:assembleRelease :src:tr:animpow:assembleRelease :src:tr:hentaizm:assembleRelease :src:tr:tranimeizle:assembleRelease
 
       - name: Prepare repository files
         shell: bash
@@ -56,7 +57,7 @@ jobs:
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         run: |
           mkdir -p repo/apk
-          find src/tr/animecix/build/outputs/apk/release src/tr/animpow/build/outputs/apk/release src/tr/hentaizm/build/outputs/apk/release -name '*.apk' -exec cp {} repo/apk/ \;
+          find src/tr/animecix/build/outputs/apk/release src/tr/animpow/build/outputs/apk/release src/tr/hentaizm/build/outputs/apk/release src/tr/tranimeizle/build/outputs/apk/release -name '*.apk' -exec cp {} repo/apk/ \;
           for apk in repo/apk/*-release.apk; do
             mv "$apk" "${apk%-release.apk}.apk"
           done
