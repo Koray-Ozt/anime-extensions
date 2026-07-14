@@ -189,7 +189,7 @@ class Animecix : AnimeHttpSource() {
                                 append(it)
                             }
                         }
-                        url = "/titles/$titleId/season/$actualSeason/episode/${formatEpisodeNumber(episodeNumber)}"
+                        this.url = "/titles/$titleId/season/$actualSeason/episode/${formatEpisodeNumber(episodeNumber)}"
                         this.episode_number = episodeNumber
                         date_upload = parseDate(episode.string("release_date"))
                     }
