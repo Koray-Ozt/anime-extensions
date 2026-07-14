@@ -23,11 +23,11 @@ class Animpow : AnimeHttpSource() {
 
     override val supportsLatest = true
 
-    override val headers = super.headers.newBuilder()
+    private val sourceHeaders = headers.newBuilder()
         .set("Referer", "$baseUrl/")
         .build()
 
-    private val webViewResolver by lazy { AnimpowWebViewResolver(headers) }
+    private val webViewResolver by lazy { AnimpowWebViewResolver(sourceHeaders) }
 
     override fun popularAnimeRequest(page: Int): Request = catalogRequest(page, "popularity")
 
@@ -42,7 +42,7 @@ class Animpow : AnimeHttpSource() {
             .addQueryParameter("siralama", sort)
             .addQueryParameter("sayfa", page.toString())
             .build()
-        return GET(url, headers)
+        return GET(url, sourceHeaders)
     }
 
     private fun catalogParse(response: Response): AnimesPage {
@@ -63,7 +63,7 @@ class Animpow : AnimeHttpSource() {
         val url = "$baseUrl/search".toHttpUrl().newBuilder()
             .addQueryParameter("q", query)
             .build()
-        return GET(url, headers)
+        return GET(url, sourceHeaders)
     }
 
     override fun searchAnimeParse(response: Response): AnimesPage {
@@ -92,7 +92,7 @@ class Animpow : AnimeHttpSource() {
         }
     }
 
-    override fun animeDetailsRequest(anime: SAnime): Request = GET(anime.url.absoluteUrl(), headers)
+    override fun animeDetailsRequest(anime: SAnime): Request = GET(anime.url.absoluteUrl(), sourceHeaders)
 
     override fun animeDetailsParse(response: Response): SAnime {
         val document = response.asJsoup()
@@ -146,7 +146,7 @@ class Animpow : AnimeHttpSource() {
         result.error?.let { throw Exception(it) }
         val streamUrl = result.url ?: throw Exception("Animpow video bağlantısı alınamadı. Lütfen tekrar deneyin.")
 
-        val videoHeaders = headers.newBuilder().apply {
+        val videoHeaders = sourceHeaders.newBuilder().apply {
             result.cookie?.takeIf(String::isNotBlank)?.let { set("Cookie", it) }
         }.build()
 
