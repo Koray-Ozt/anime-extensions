@@ -1,4 +1,4 @@
-name: Build anime extensions
+name: Build K-Kitsu extensions
 
 on:
   push:
@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: anime-extensions-${{ github.ref }}
+  group: k-kitsu-extensions-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -68,9 +68,9 @@ jobs:
           fingerprint="$(keytool -list -v -keystore signingkey.jks -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" | awk -F': ' '/SHA256:/ { gsub(":", "", $2); print tolower($2); exit }')"
           test -n "$fingerprint"
           jq -n \
-            --arg name "KorayKitsu Extensions" \
-            --arg shortName "KorayKitsu" \
-            --arg website "https://github.com/Koray-Ozt/anime-extensions" \
+            --arg name "K-Kitsu Extensions" \
+            --arg shortName "K-Kitsu" \
+            --arg website "https://github.com/Koray-Ozt/k-kitsu-extensions" \
             --arg fingerprint "$fingerprint" \
             '{meta: {name: $name, shortName: $shortName, website: $website, signingKeyFingerprint: $fingerprint}}' \
             > repo/repo.json

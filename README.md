@@ -1,15 +1,15 @@
 <p align="center">
-  <img src=".github/assets/koraykitsu-banner.png" alt="KorayKitsu Extensions banner" width="100%">
+  <img src=".github/assets/k-kitsu-banner.png" alt="K-Kitsu Extensions banner" width="100%">
 </p>
 
-<h1 align="center">KorayKitsu Extensions</h1>
+<h1 align="center">K-Kitsu Extensions</h1>
 
 <p align="center">
   Anikku ve Aniyomi için özenle hazırlanan Türkçe anime kaynakları.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Koray-Ozt/anime-extensions/actions/workflows/build_push.yml"><img src="https://github.com/Koray-Ozt/anime-extensions/actions/workflows/build_push.yml/badge.svg" alt="Build durumu"></a>
+  <a href="https://github.com/Koray-Ozt/k-kitsu-extensions/actions/workflows/build_push.yml"><img src="https://github.com/Koray-Ozt/k-kitsu-extensions/actions/workflows/build_push.yml/badge.svg" alt="Build durumu"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-Apache--2.0-7c3aed" alt="Apache 2.0 lisansı"></a>
   <img src="https://img.shields.io/badge/dil-Türkçe-06b6d4" alt="Türkçe">
 </p>
@@ -19,7 +19,7 @@
 Anikku veya Aniyomi içindeki **Eklenti depoları** bölümüne aşağıdaki adresi ekleyin:
 
 ```text
-https://raw.githubusercontent.com/Koray-Ozt/anime-repo/repo/index.min.json
+https://raw.githubusercontent.com/Koray-Ozt/k-kitsu-repo/repo/index.min.json
 ```
 
 Depoyu yeniledikten sonra istediğiniz kaynağı eklenti listesinden kurabilirsiniz.
@@ -36,7 +36,7 @@ Depoyu yeniledikten sonra istediğiniz kaynağı eklenti listesinden kurabilirsi
 ## İki repo, tek akış
 
 - **Bu repo** eklentilerin Kotlin kaynak kodunu ve otomatik derleme iş akışını barındırır.
-- **[anime-repo](https://github.com/Koray-Ozt/anime-repo/tree/repo)** imzalı APK dosyalarını, simgeleri ve Anikku katalog indeksini yayımlar.
+- **[k-kitsu-repo](https://github.com/Koray-Ozt/k-kitsu-repo/tree/repo)** imzalı APK dosyalarını, simgeleri ve Anikku katalog indeksini yayımlar.
 
 Her eklenti sürümü artırıldığında GitHub Actions imzalı APK'ları üretir. Dağıtım reposundaki
 `index.min.json`, uygulamanın güncellemeyi algılamasını sağlar.
