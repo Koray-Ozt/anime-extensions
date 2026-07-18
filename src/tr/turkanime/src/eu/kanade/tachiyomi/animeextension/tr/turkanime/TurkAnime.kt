@@ -271,7 +271,7 @@ class TurkAnime :
         val selectedHoster = document.select("div#videodetay div.btn-group:not(.pull-right) > button.btn-danger")
         val hosters = document.select("div#videodetay div.btn-group:not(.pull-right) > button.btn-default[onclick*=videosec]")
 
-        val hosterSelection = preferences.getStringSet(PREF_HOSTER_KEY, PREF_HOSTER_DEFAULT)!!
+        val hosterSelection = selectedHosters()
 
         val videoList = buildList {
             val selectedHosterName = selectedHoster.text()
@@ -413,6 +413,14 @@ class TurkAnime :
 
     private fun String.trimOnClick() = baseUrl + "/" + this.substringAfter("IndexIcerik('").substringBefore("'")
 
+    private fun selectedHosters(): Set<String> {
+        val selected = preferences.getStringSet(PREF_HOSTER_KEY, PREF_HOSTER_DEFAULT)!!
+        if (selected != LEGACY_HOSTER_DEFAULT) return selected
+
+        preferences.edit().putStringSet(PREF_HOSTER_KEY, PREF_HOSTER_DEFAULT).apply()
+        return PREF_HOSTER_DEFAULT
+    }
+
     private val xmlHeader = Headers.headersOf("X-Requested-With", "XMLHttpRequest")
 
     private val mutex = Mutex()
@@ -539,7 +547,8 @@ class TurkAnime :
 
         private const val PREF_HOSTER_KEY = "hoster_selection"
         private const val PREF_HOSTER_TITLE = "Video sağlayıcıları"
-        private val PREF_HOSTER_DEFAULT = setOf("GDRIVE", "VOE")
+        private val LEGACY_HOSTER_DEFAULT = setOf("GDRIVE", "VOE")
+        private val PREF_HOSTER_DEFAULT by lazy { SUPPORTED_HOSTERS.filterNot { it == "GDRIVE" }.toSet() }
 
         // Copypasted from tr/tranimeizle.
         private const val PREF_FANSUB_SELECTION_KEY = "pref_fansub_selection"
