@@ -32,6 +32,7 @@ Depoyu yeniledikten sonra istediğiniz kaynağı eklenti listesinden kurabilirsi
 | Animpow | [animpow.com](https://animpow.com) | Şifreli API ve WebView yedeği |
 | HentaiZM | [hentaizm1.com](https://www.hentaizm1.com) | Yalnızca yetişkinler için (18+) |
 | TR Anime İzle | [tranimeizle.io](https://www.tranimeizle.io) | Türkçe anime kataloğu |
+| Türk Anime TV | [turkanime.tv](https://www.turkanime.tv) | Gelişmiş filtreler ve çoklu video sağlayıcıları |
 
 ## İki repo, tek akış
 
@@ -48,7 +49,8 @@ src/tr/
 ├── animecix/
 ├── animpow/
 ├── hentaizm/
-└── tranimeizle/
+├── tranimeizle/
+└── turkanime/
 ```
 
 ## Sorun bildirimi

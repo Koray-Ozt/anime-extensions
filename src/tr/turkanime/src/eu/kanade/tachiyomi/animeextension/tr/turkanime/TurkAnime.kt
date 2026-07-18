@@ -344,7 +344,7 @@ class TurkAnime :
                 MVidooExtractor(client).videosFromUrl(hosterLink, prefix = "$subber: ")
             }
 
-            "ODNOKLASSNIKI" -> {
+            "ODNOKLASSNIKI", "OK.RU" -> {
                 OkruExtractor(client).videosFromUrl(hosterLink, prefix = "$subber: ")
             }
 
@@ -476,6 +476,7 @@ class TurkAnime :
             "MP4UPLOAD",
             "MVIDOO",
             "ODNOKLASSNIKI",
+            "OK.RU",
             "SENDVID",
             "SIBNET",
             "UQLOAD",
@@ -531,26 +532,26 @@ class TurkAnime :
         private const val DEFAULT_KEY = "710^8A@3@>T2}#zN5xK?kR7KNKb@-A!LzYL5~M1qU0UfdWsZoBm4UUat%}ueUv6E--*hDPPbH7K2bp9^3o41hw,khL:}Kx8080@M"
 
         private const val PREF_QUALITY_KEY = "preferred_quality"
-        private const val PREF_QUALITY_TITLE = "Preferred quality"
+        private const val PREF_QUALITY_TITLE = "Tercih edilen kalite"
         private const val PREF_QUALITY_DEFAULT = "1080"
         private val PREF_QUALITY_ENTRIES = arrayOf("1080p", "720p", "480p", "360p")
         private val PREF_QUALITY_VALUES = arrayOf("1080", "720", "480", "360")
 
         private const val PREF_HOSTER_KEY = "hoster_selection"
-        private const val PREF_HOSTER_TITLE = "Enable/Disable Hosts"
+        private const val PREF_HOSTER_TITLE = "Video sağlayıcıları"
         private val PREF_HOSTER_DEFAULT = setOf("GDRIVE", "VOE")
 
         // Copypasted from tr/tranimeizle.
         private const val PREF_FANSUB_SELECTION_KEY = "pref_fansub_selection"
-        private const val PREF_FANSUB_SELECTION_TITLE = "Enable/Disable Fansubs"
+        private const val PREF_FANSUB_SELECTION_TITLE = "Fansub grupları"
 
         private const val PREF_ADDITIONAL_FANSUBS_KEY = "pref_additional_fansubs_key"
-        private const val PREF_ADDITIONAL_FANSUBS_TITLE = "Add custom fansubs to the selection preference"
+        private const val PREF_ADDITIONAL_FANSUBS_TITLE = "Özel fansub grubu ekle"
         private const val PREF_ADDITIONAL_FANSUBS_DEFAULT = ""
-        private const val PREF_ADDITIONAL_FANSUBS_DIALOG_TITLE = "Enter a list of additional fansubs, separated by a comma."
-        private const val PREF_ADDITIONAL_FANSUBS_DIALOG_MESSAGE = "Example: AntichristHaters Fansub, 2cm erect subs"
-        private const val PREF_ADDITIONAL_FANSUBS_SUMMARY = "You can add more fansubs to the previous preference from here."
-        private const val PREF_ADDITIONAL_FANSUBS_TOAST = "Reopen the extension's preferences for it to take effect."
+        private const val PREF_ADDITIONAL_FANSUBS_DIALOG_TITLE = "Ek fansub gruplarını virgülle ayırarak yazın."
+        private const val PREF_ADDITIONAL_FANSUBS_DIALOG_MESSAGE = "Örnek: Fansub A, Fansub B"
+        private const val PREF_ADDITIONAL_FANSUBS_SUMMARY = "Listede bulunmayan fansub gruplarını buradan ekleyebilirsiniz."
+        private const val PREF_ADDITIONAL_FANSUBS_TOAST = "Değişikliğin uygulanması için eklenti ayarlarını yeniden açın."
     }
 
     private val PREF_FANSUB_SELECTION_ENTRIES: Array<String> get() {
