@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -43,6 +44,11 @@ class Animpow : AnimeHttpSource() {
 
     private val api by lazy { AnimpowApiClient(client, json, sourceHeaders) }
 
+    private val webApi by lazy { AnimpowWebViewApiClient(json, sourceHeaders) }
+
+    @Volatile
+    private var useWebApi = false
+
     private val webViewResolver by lazy { AnimpowWebViewResolver(sourceHeaders) }
 
     override fun popularAnimeRequest(page: Int): Request = throw UnsupportedOperationException()
@@ -58,7 +64,7 @@ class Animpow : AnimeHttpSource() {
     override suspend fun getLatestUpdates(page: Int): AnimesPage = catalog(page, "year")
 
     private suspend fun catalog(page: Int, sort: String): AnimesPage {
-        val root = api.get(
+        val root = apiGet(
             "/anime/list",
             "sayfa" to page.toString(),
             "limit" to PAGE_SIZE.toString(),
@@ -84,7 +90,7 @@ class Animpow : AnimeHttpSource() {
     override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage {
         if (query.isBlank()) return getPopularAnime(page)
 
-        val root = api.get(
+        val root = apiGet(
             "/anime/arama",
             "q" to query,
             "limit" to PAGE_SIZE.toString(),
@@ -125,7 +131,7 @@ class Animpow : AnimeHttpSource() {
     override fun animeDetailsParse(response: Response): SAnime = throw UnsupportedOperationException()
 
     override suspend fun getAnimeDetails(anime: SAnime): SAnime {
-        val root = api.get("/anime/${anime.animpowId()}")
+        val root = apiGet("/anime/${anime.animpowId()}")
         val item = root.objOrNull("anime") ?: root
 
         return anime.apply {
@@ -144,7 +150,7 @@ class Animpow : AnimeHttpSource() {
 
     override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
         val animeId = anime.animpowId()
-        val episodeRecords = api.get("/anime/$animeId/bolumler").array("episodes")
+        val episodeRecords = apiGet("/anime/$animeId/bolumler").array("episodes")
         val episodes = episodeRecords
             .mapNotNull { it.objOrNull() }
             .filter { it.float("episode_num") != null }
@@ -187,7 +193,7 @@ class Animpow : AnimeHttpSource() {
     }
 
     private suspend fun generatedEpisodesFromDetails(animeId: Int): List<SEpisode> {
-        val detail = api.get("/anime/$animeId").objOrNull("anime") ?: return emptyList()
+        val detail = apiGet("/anime/$animeId").objOrNull("anime") ?: return emptyList()
         val totalEpisodes = detail.int("total_episodes") ?: 0
         val titleType = detail.string("title_type").orEmpty()
 
@@ -238,7 +244,7 @@ class Animpow : AnimeHttpSource() {
         val season = match.groupValues[2].toInt()
         val episodeNumber = match.groupValues[3].toFloat()
 
-        val records = api.get("/anime/$animeId/bolumler")
+        val records = apiGet("/anime/$animeId/bolumler")
             .array("episodes")
             .mapNotNull { it.objOrNull() }
             .filter {
@@ -271,6 +277,18 @@ class Animpow : AnimeHttpSource() {
                 headers = fallbackHeaders,
             ),
         )
+    }
+
+    private suspend fun apiGet(path: String, vararg queryParameters: Pair<String, String?>): JsonObject {
+        if (useWebApi) return webApi.get(path, *queryParameters)
+
+        return try {
+            api.get(path, *queryParameters)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            useWebApi = true
+            webApi.get(path, *queryParameters)
+        }
     }
 
     private fun videosFromRecord(record: JsonObject): List<Video> {
