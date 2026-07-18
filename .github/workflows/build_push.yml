@@ -68,8 +68,8 @@ jobs:
           fingerprint="$(keytool -list -v -keystore signingkey.jks -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" | awk -F': ' '/SHA256:/ { gsub(":", "", $2); print tolower($2); exit }')"
           test -n "$fingerprint"
           jq -n \
-            --arg name "Koray-Ozt Anime Extensions" \
-            --arg shortName "Koray-Ozt" \
+            --arg name "KorayKitsu Extensions" \
+            --arg shortName "KorayKitsu" \
             --arg website "https://github.com/Koray-Ozt/anime-extensions" \
             --arg fingerprint "$fingerprint" \
             '{meta: {name: $name, shortName: $shortName, website: $website, signingKeyFingerprint: $fingerprint}}' \
