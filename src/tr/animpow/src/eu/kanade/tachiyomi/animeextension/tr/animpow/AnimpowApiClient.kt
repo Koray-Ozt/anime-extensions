@@ -3,8 +3,11 @@ package eu.kanade.tachiyomi.animeextension.tr.animpow
 import android.util.Base64
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
+import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.network.awaitSuccess
 import keiyoushi.utils.toJsonRequestBody
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -14,16 +17,14 @@ import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.security.KeyFactory
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.interfaces.RSAPublicKey
-import java.security.spec.MGF1ParameterSpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.OAEPParameterSpec
-import javax.crypto.spec.PSource
 import javax.crypto.spec.SecretKeySpec
 
 class AnimpowApiClient(
@@ -33,27 +34,36 @@ class AnimpowApiClient(
 ) {
 
     private var publicKey: RSAPublicKey? = null
-    private var sessionId: String? = null
-    private var aesKey: SecretKey? = null
+    @Volatile
+    private var session: SecureSession? = null
+
+    private val sessionMutex = Mutex()
 
     suspend fun get(path: String, vararg queryParameters: Pair<String, String?>): JsonObject {
-        ensureSession()
-        val responseText = secureGet(path, queryParameters)
-        val envelope = responseText.asJsonObject()
+        repeat(2) { attempt ->
+            val currentSession = ensureSession()
+            val response = secureGet(path, queryParameters, currentSession.id)
+            val envelope = response.body.asJsonObject()
 
-        if (envelope.string("error") == "Invalid or expired session key" ||
-            envelope.string("error") == "Encryption is required for this API route" ||
-            envelope.string("error") == "Encryption is required for this API route."
-        ) {
-            resetSession()
-            ensureSession()
-            return decryptEnvelope(secureGet(path, queryParameters).asJsonObject())
+            if (response.code == 400 && envelope.isSessionError() && attempt == 0) {
+                resetSession(currentSession)
+                return@repeat
+            }
+
+            if (response.code !in 200..299) {
+                throw Exception(envelope.string("message") ?: envelope.string("error") ?: "Animpow API hatasi: ${response.code}")
+            }
+
+            return decryptEnvelope(envelope, currentSession.key)
         }
-
-        return decryptEnvelope(envelope)
+        throw Exception("Animpow guvenli oturumu yenilenemedi.")
     }
 
-    private suspend fun secureGet(path: String, queryParameters: Array<out Pair<String, String?>>): String {
+    private suspend fun secureGet(
+        path: String,
+        queryParameters: Array<out Pair<String, String?>>,
+        sessionId: String,
+    ): ApiResponse {
         val requestUrl = "$API_BASE$path".toHttpUrl().newBuilder().apply {
             queryParameters.forEach { (key, value) ->
                 if (value != null) addQueryParameter(key, value)
@@ -65,22 +75,24 @@ class AnimpowApiClient(
             sourceHeaders.newBuilder()
                 .set("Accept", "application/json, text/plain, */*")
                 .set("Content-Type", "application/json")
-                .set("X-Session-Id", sessionId ?: "")
+                .set("X-Session-Id", sessionId)
                 .build(),
         )
 
-        return client.newCall(request).awaitSuccess().use { it.body.string() }
+        return client.newCall(request).await().use { ApiResponse(it.code, it.body.string()) }
     }
 
-    private suspend fun ensureSession() {
-        if (sessionId != null && aesKey != null) return
+    private suspend fun ensureSession(): SecureSession = session ?: sessionMutex.withLock {
+        session ?: createSession().also { session = it }
+    }
 
+    private suspend fun createSession(): SecureSession {
         val key = publicKey ?: fetchPublicKey().also { publicKey = it }
-        val nextAesKey = randomAesKey()
-        val nextSessionId = UUID.randomUUID().toString()
-        val encryptedKey = encryptAesKey(key, nextAesKey)
+        val aesKey = randomAesKey()
+        val sessionId = UUID.randomUUID().toString()
+        val encryptedKey = encryptAesKey(key, aesKey)
 
-        val body = """{"sessionId":"$nextSessionId","encryptedKey":"$encryptedKey"}""".toJsonRequestBody()
+        val body = """{"sessionId":"$sessionId","encryptedKey":"$encryptedKey"}""".toJsonRequestBody()
         val request = POST(
             "$API_BASE/auth/handshake",
             sourceHeaders.newBuilder()
@@ -91,9 +103,7 @@ class AnimpowApiClient(
         )
 
         client.newCall(request).awaitSuccess().close()
-
-        aesKey = nextAesKey
-        sessionId = nextSessionId
+        return SecureSession(sessionId, aesKey)
     }
 
     private suspend fun fetchPublicKey(): RSAPublicKey {
@@ -121,17 +131,55 @@ class AnimpowApiClient(
     }
 
     private fun encryptAesKey(publicKey: RSAPublicKey, aesKey: SecretKey): String {
-        val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        cipher.init(
-            Cipher.ENCRYPT_MODE,
-            publicKey,
-            OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT),
-        )
-        return Base64.encodeToString(cipher.doFinal(aesKey.encoded), Base64.NO_WRAP)
+        // Some Android crypto providers silently force MGF1-SHA1 for OAEP. The
+        // website requires SHA-256 for both OAEP digests, so encode OAEP here and
+        // let the provider perform only the raw RSA operation.
+        val encoded = oaepEncode(aesKey.encoded, (publicKey.modulus.bitLength() + 7) / 8)
+        val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey)
+        return Base64.encodeToString(cipher.doFinal(encoded), Base64.NO_WRAP)
     }
 
-    private fun decryptEnvelope(envelope: JsonObject): JsonObject {
-        val key = aesKey ?: throw Exception("Animpow session hazir degil.")
+    private fun oaepEncode(message: ByteArray, encodedLength: Int): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashLength = digest.digestLength
+        require(message.size <= encodedLength - (2 * hashLength) - 2) { "Animpow anahtari RSA icin cok uzun." }
+
+        val dataBlock = ByteArray(encodedLength - hashLength - 1)
+        digest.digest(ByteArray(0)).copyInto(dataBlock)
+        dataBlock[dataBlock.size - message.size - 1] = 1
+        message.copyInto(dataBlock, dataBlock.size - message.size)
+
+        val seed = ByteArray(hashLength).also(secureRandom::nextBytes)
+        val maskedDataBlock = xor(dataBlock, mgf1(seed, dataBlock.size))
+        val maskedSeed = xor(seed, mgf1(maskedDataBlock, hashLength))
+        return byteArrayOf(0) + maskedSeed + maskedDataBlock
+    }
+
+    private fun mgf1(seed: ByteArray, length: Int): ByteArray {
+        val output = ByteArray(length)
+        var offset = 0
+        var counter = 0
+        while (offset < length) {
+            val counterBytes = byteArrayOf(
+                (counter ushr 24).toByte(),
+                (counter ushr 16).toByte(),
+                (counter ushr 8).toByte(),
+                counter.toByte(),
+            )
+            val block = MessageDigest.getInstance("SHA-256").digest(seed + counterBytes)
+            val count = minOf(block.size, length - offset)
+            block.copyInto(output, offset, 0, count)
+            offset += count
+            counter++
+        }
+        return output
+    }
+
+    private fun xor(left: ByteArray, right: ByteArray): ByteArray =
+        ByteArray(left.size) { index -> (left[index].toInt() xor right[index].toInt()).toByte() }
+
+    private fun decryptEnvelope(envelope: JsonObject, key: SecretKey): JsonObject {
         val iv = envelope.string("iv") ?: return envelope
         val data = envelope.string("data") ?: return envelope
         val authTag = envelope.string("authTag") ?: return envelope
@@ -145,17 +193,27 @@ class AnimpowApiClient(
         return String(cipher.doFinal(cipherText), Charsets.UTF_8).asJsonObject()
     }
 
-    @Synchronized
-    private fun resetSession() {
-        sessionId = null
-        aesKey = null
+    private suspend fun resetSession(expiredSession: SecureSession) = sessionMutex.withLock {
+        if (session === expiredSession) session = null
     }
 
     private fun String.asJsonObject(): JsonObject = json.parseToJsonElement(this).jsonObject
 
     private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 
+    private fun JsonObject.isSessionError(): Boolean = string("error") in SESSION_ERRORS
+
+    private data class SecureSession(val id: String, val key: SecretKey)
+
+    private data class ApiResponse(val code: Int, val body: String)
+
     companion object {
         private const val API_BASE = "https://client-api.animpow.com/api/v1"
+        private val SESSION_ERRORS = setOf(
+            "Invalid or expired session key",
+            "Encryption is required for this API route",
+            "Encryption is required for this API route.",
+        )
+        private val secureRandom = SecureRandom()
     }
 }
