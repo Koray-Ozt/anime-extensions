@@ -80,7 +80,7 @@ class AnimpowWebViewResolver(private val globalHeaders: Headers) {
                     request: WebResourceRequest,
                 ): WebResourceResponse? {
                     val url = request.url.toString()
-                    if (result.url == null && STREAM_REGEX.containsMatchIn(url)) {
+                    if (result.url == null && VIDEO_URL_REGEX.containsMatchIn(url)) {
                         jsInterface.passVideo(url, "Otomatik")
                     }
                     return super.shouldInterceptRequest(view, request)
@@ -93,11 +93,11 @@ class AnimpowWebViewResolver(private val globalHeaders: Headers) {
                             (() => {
                               const send = () => {
                                 const bodyText = document.body?.innerText || '';
-                                if (bodyText.includes('Günlük İzleme Limit')) {
-                                  window.$interfaceName.passError('Animpow günlük izleme limitine ulaşıldı. Limit yenilendiğinde tekrar deneyin.');
+                                if (bodyText.includes('Günlük İzleme Limit') || bodyText.includes('Gunluk Izleme Limit')) {
+                                  window.$interfaceName.passError('Animpow gunluk izleme limitine ulasildi. Limit yenilendiginde tekrar deneyin.');
                                   return;
                                 }
-                                const video = document.querySelector("video[src*='/stream/?token=']");
+                                const video = document.querySelector("video[src], source[src]");
                                 if (video?.src) {
                                   const quality = Array.from(document.querySelectorAll('button'))
                                     .map(button => (button.textContent || '').trim())
@@ -129,7 +129,7 @@ class AnimpowWebViewResolver(private val globalHeaders: Headers) {
         }
 
         if (result.url == null && result.error == null) {
-            result.error = "Animpow oynatıcısı zaman aşımına uğradı. Lütfen tekrar deneyin."
+            result.error = "Animpow oynaticisi zaman asimina ugradi. Lutfen tekrar deneyin."
         }
 
         return result
@@ -142,6 +142,6 @@ class AnimpowWebViewResolver(private val globalHeaders: Headers) {
 
     companion object {
         private const val TIMEOUT_SECONDS = 30L
-        private val STREAM_REGEX = Regex("https?://[^/]+/stream/\\?token=")
+        private val VIDEO_URL_REGEX = Regex("https?://[^\\s\"']+(?:/stream/\\?token=|\\.m3u8(?:\\?|$)|\\.mp4(?:\\?|$))")
     }
 }
