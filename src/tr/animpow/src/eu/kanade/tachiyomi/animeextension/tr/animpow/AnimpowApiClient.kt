@@ -34,6 +34,7 @@ class AnimpowApiClient(
 ) {
 
     private var publicKey: RSAPublicKey? = null
+
     @Volatile
     private var session: SecureSession? = null
 
@@ -176,8 +177,7 @@ class AnimpowApiClient(
         return output
     }
 
-    private fun xor(left: ByteArray, right: ByteArray): ByteArray =
-        ByteArray(left.size) { index -> (left[index].toInt() xor right[index].toInt()).toByte() }
+    private fun xor(left: ByteArray, right: ByteArray): ByteArray = ByteArray(left.size) { index -> (left[index].toInt() xor right[index].toInt()).toByte() }
 
     private fun decryptEnvelope(envelope: JsonObject, key: SecretKey): JsonObject {
         val iv = envelope.string("iv") ?: return envelope
